@@ -1,0 +1,124 @@
+// Traffic Management System with Arduino Uno R3
+// Components: Ultrasonic Sensor, Servo Motor, 3 LEDs (Red, Yellow, Green)
+
+#include <Servo.h>
+
+// Pin Definitions
+#define TRIG_PIN 12        // Ultrasonic Sensor Trigger Pin
+#define ECHO_PIN 11        // Ultrasonic Sensor Echo Pin
+#define RED_LED_PIN 8      // Red LED (Stop)
+#define YELLOW_LED_PIN 9   // Yellow LED (Wait)
+#define GREEN_LED_PIN 10   // Green LED (Go)
+#define SERVO_PIN 6        // Servo Motor Signal Pin
+
+// Servo Object
+Servo trafficServo;
+
+// Variables
+long duration;
+float distance;
+const int DETECTION_DISTANCE = 20; // Detection distance in cm
+boolean vehicleDetected = false;
+
+void setup() {
+  // Initialize Serial Communication
+  Serial.begin(9600);
+  
+  // Set Pin Modes
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(YELLOW_LED_PIN, OUTPUT);
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  
+  // Initialize Servo
+  trafficServo.attach(SERVO_PIN);
+  trafficServo.write(0); // Initial position (gate open)
+  
+  // Initialize all LEDs to OFF
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_PIN, LOW);
+  digitalWrite(GREEN_LED_PIN, LOW);
+  
+  Serial.println("Traffic System Initialized");
+  Serial.println("Waiting for vehicle detection...");
+}
+
+void loop() {
+  // Measure distance using ultrasonic sensor
+  distance = measureDistance();
+  
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+  
+  // Check if vehicle is detected
+  if (distance <= DETECTION_DISTANCE && !vehicleDetected) {
+    vehicleDetected = true;
+    Serial.println("Vehicle Detected!");
+    trafficControl();
+  }
+  
+  // Reset detection when vehicle is far away
+  if (distance > DETECTION_DISTANCE && vehicleDetected) {
+    vehicleDetected = false;
+    Serial.println("Vehicle Passed, Gate Opened");
+    trafficServo.write(0); // Open gate
+    allLEDsOff();
+  }
+  
+  delay(500); // 500ms delay between measurements
+}
+
+// Function to measure distance using Ultrasonic Sensor
+float measureDistance() {
+  // Send trigger pulse
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  
+  // Receive echo
+  duration = pulseIn(ECHO_PIN, HIGH);
+  
+  // Calculate distance (speed of sound = 343 m/s)
+  float dist = (duration * 0.0343) / 2;
+  return dist;
+}
+
+// Function to control traffic lights and servo
+void trafficControl() {
+  // Step 1: RED LIGHT + SERVO CLOSED (0 seconds to 5 seconds)
+  Serial.println("RED LIGHT ON - Vehicle STOPPED");
+  digitalWrite(RED_LED_PIN, HIGH);
+  digitalWrite(YELLOW_LED_PIN, LOW);
+  digitalWrite(GREEN_LED_PIN, LOW);
+  trafficServo.write(90); // Close gate (90 degrees)
+  
+  delay(5000); // Red light for 5 seconds
+  
+  // Step 2: YELLOW LIGHT (5 seconds to 8 seconds)
+  Serial.println("YELLOW LIGHT ON - Wait");
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_PIN, HIGH);
+  digitalWrite(GREEN_LED_PIN, LOW);
+  
+  delay(3000); // Yellow light for 3 seconds
+  
+  // Step 3: GREEN LIGHT (8 seconds onwards)
+  Serial.println("GREEN LIGHT ON - Go");
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_PIN, LOW);
+  digitalWrite(GREEN_LED_PIN, HIGH);
+  trafficServo.write(0); // Open gate
+  
+  delay(5000); // Green light for 5 seconds (then loop continues)
+}
+
+// Function to turn off all LEDs
+void allLEDsOff() {
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_PIN, LOW);
+  digitalWrite(GREEN_LED_PIN, LOW);
+}
