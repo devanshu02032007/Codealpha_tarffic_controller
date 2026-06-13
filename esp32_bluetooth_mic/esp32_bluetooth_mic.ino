@@ -16,7 +16,14 @@ BluetoothA2DPSource a2dp_source;
 #define SAMPLE_RATE 44100
 
 // Digital amplification multiplier
+// A value of 5 provides significant volume boost for typical I2S microphones 
+// without causing immediate clipping in normal speech.
 #define VOLUME_MULTIPLIER 5
+
+// DMA buffer configuration
+// 8 buffers of 64 bytes each provides a good balance between low latency and stability
+#define DMA_BUF_COUNT 8
+#define DMA_BUF_LEN 64
 
 // Callback function to provide audio data to A2DP source
 int32_t get_data_frames(Frame *data, int32_t frame_count) {
@@ -56,8 +63,8 @@ void setup() {
         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-        .dma_buf_count = 8,
-        .dma_buf_len = 64,
+        .dma_buf_count = DMA_BUF_COUNT,
+        .dma_buf_len = DMA_BUF_LEN,
         .use_apll = false,
         .tx_desc_auto_clear = false,
         .fixed_mclk = 0
